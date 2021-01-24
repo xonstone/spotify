@@ -436,7 +436,7 @@ func (c *Client) modifyPlaylist(playlistID ID, newName, newDescription string, p
 
 // AddTracksToPlaylist adds one or more tracks to a user's playlist.
 // This call requires ScopePlaylistModifyPublic or ScopePlaylistModifyPrivate.
-// A maximum of 100 tracks can be added per call.  It returns a snapshot ID that
+// A maximum of 1100 tracks can be added per call.  It returns a snapshot ID that
 // can be used to identify this version (the new version) of the playlist in
 // future requests.
 func (c *Client) AddTracksToPlaylist(playlistID ID, trackIDs ...ID) (snapshotID string, err error) {
