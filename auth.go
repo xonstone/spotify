@@ -64,6 +64,8 @@ const (
 	ScopeUserTopRead = "user-top-read"
 	// ScopeStreaming seeks permission to play music and control playback on your other devices.
 	ScopeStreaming = "streaming"
+	// ScopeUserReadPlaybackPosition seeks read access to a user’s playback position in content.
+	ScopeUserReadPlaybackPosition = "user-read-playback-position"
 )
 
 // Authenticator provides convenience functions for implementing the OAuth2 flow.

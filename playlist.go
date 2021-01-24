@@ -12,6 +12,22 @@ import (
 	"strings"
 )
 
+// PlaylistTrack contains info about a track in a playlist.
+type PlaylistTrack struct {
+	// The date and time the track was added to the playlist.
+	// You can use the TimestampLayout constant to convert
+	// this field to a time.Time value.
+	// Warning: very old playlists may not populate this value.
+	AddedAt string `json:"added_at"`
+	// The Spotify user who added the track to the playlist.
+	// Warning: vary old playlists may not populate this value.
+	AddedBy User `json:"added_by"`
+	// Whether this track is a local file or not.
+	IsLocal bool `json:"is_local"`
+	// Information about the track.
+	Track SumFullEpisodeFullTrack `json:"track"`
+}
+
 // PlaylistTracks contains details about the tracks in a playlist.
 type PlaylistTracks struct {
 	// A link to the Web API endpoint where full details of
@@ -229,8 +245,17 @@ func (c *Client) GetPlaylist(playlistID ID) (*FullPlaylist, error) {
 //    fields = "tracks.items(track(name,href,album(!name,href)))"
 func (c *Client) GetPlaylistOpt(playlistID ID, fields string) (*FullPlaylist, error) {
 	spotifyURL := fmt.Sprintf("%splaylists/%s", c.baseURL, playlistID)
+
+	v := url.Values{}
+
+	v.Set("additional_types", "track,episode")
+
 	if fields != "" {
-		spotifyURL += "?fields=" + url.QueryEscape(fields)
+		v.Set("fields", fields)
+	}
+
+	if params := v.Encode(); params != "" {
+		spotifyURL += "?" + params
 	}
 
 	var playlist FullPlaylist
@@ -272,6 +297,9 @@ func (c *Client) GetPlaylistTracksOpt(playlistID ID,
 
 	spotifyURL := fmt.Sprintf("%splaylists/%s/tracks", c.baseURL, playlistID)
 	v := url.Values{}
+
+	v.Set("additional_types", "track,episode")
+
 	if fields != "" {
 		v.Set("fields", fields)
 	}
@@ -420,8 +448,24 @@ func (c *Client) AddTracksToPlaylist(playlistID ID, trackIDs ...ID) (snapshotID 
 	m := make(map[string]interface{})
 	m["uris"] = uris
 
-	spotifyURL := fmt.Sprintf("%splaylists/%s/tracks",
-		c.baseURL, string(playlistID))
+	return c.addItemsToPlaylist(playlistID, m)
+}
+
+// AddItemsToPlaylist adds one or more items to a user's playlist.
+// This call requires ScopePlaylistModifyPublic or ScopePlaylistModifyPrivate.
+// A maximum of 100 items can be added per call.  It returns a snapshot ID that
+// can be used to identify this version (the new version) of the playlist in
+// future requests.
+func (c *Client) AddItemsToPlaylist(playlistID ID, uris ...URI) (snapshotID string, err error) {
+	m := make(map[string]interface{})
+	m["uris"] = uris
+
+	return c.addItemsToPlaylist(playlistID, m)
+}
+
+func (c *Client) addItemsToPlaylist(playlistID ID, m interface{}) (string, error) {
+	spotifyURL := fmt.Sprintf("%splaylists/%s/tracks", c.baseURL, string(playlistID))
+
 	body, err := json.Marshal(m)
 	if err != nil {
 		return "", err
@@ -459,6 +503,25 @@ func (c *Client) RemoveTracksFromPlaylist(playlistID ID, trackIDs ...ID) (newSna
 
 	for i, u := range trackIDs {
 		tracks[i].URI = fmt.Sprintf("spotify:track:%s", u)
+	}
+	return c.removeTracksFromPlaylist(playlistID, tracks, "")
+}
+
+// RemoveItemsFromPlaylist removes one or more items from a user's playlist.
+// This call requrles that the user has authorized the ScopePlaylistModifyPublic
+// or ScopePlaylistModifyPrivate scopes.
+//
+// If the item(s) occur multiple times in the specified playlist, then all occurrences
+// of the item will be removed.  If successful, the snapshot ID returned can be used to
+// identify the playlist version in future requests.
+func (c *Client) RemoveItemsFromPlaylist(playlistID ID, uris ...URI) (newSnapshotID string, err error) {
+
+	tracks := make([]struct {
+		URI string `json:"uri"`
+	}, len(uris))
+
+	for i, u := range uris {
+		tracks[i].URI = string(u)
 	}
 	return c.removeTracksFromPlaylist(playlistID, tracks, "")
 }
@@ -539,12 +602,41 @@ func (c *Client) removeTracksFromPlaylist(playlistID ID,
 // ScopePlaylistModifyPublic scope.  Modifying a private playlist requires the
 // ScopePlaylistModifyPrivate scope.
 //
-// A maximum of 100 tracks is permited in this call.  Additional tracks must be
+// A maximum of 100 tracks is permitted in this call.  Additional tracks must be
 // added via AddTracksToPlaylist.
 func (c *Client) ReplacePlaylistTracks(playlistID ID, trackIDs ...ID) error {
 	trackURIs := make([]string, len(trackIDs))
 	for i, u := range trackIDs {
 		trackURIs[i] = fmt.Sprintf("spotify:track:%s", u)
+	}
+	spotifyURL := fmt.Sprintf("%splaylists/%s/tracks?uris=%s",
+		c.baseURL, playlistID, strings.Join(trackURIs, ","))
+	req, err := http.NewRequest("PUT", spotifyURL, nil)
+	if err != nil {
+		return err
+	}
+	err = c.execute(req, nil, http.StatusCreated)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReplacePlaylistItems replaces all of the items in a playlist, overwriting its
+// existing items  This can be useful for replacing or reordering items, or for
+// clearing a playlist.
+//
+// Modifying a public playlist requires that the user has authorized the
+// ScopePlaylistModifyPublic scope.  Modifying a private playlist requires the
+// ScopePlaylistModifyPrivate scope.
+//
+// A maximum of 100 items is permitted in this call.  Additional items must be
+// added via AddItemsToPlaylist.
+func (c *Client) ReplacePlaylistItems(playlistID ID, itemURIs ...URI) error {
+	trackURIs := make([]string, len(itemURIs))
+	for i, u := range itemURIs {
+		trackURIs[i] = string(u)
 	}
 	spotifyURL := fmt.Sprintf("%splaylists/%s/tracks?uris=%s",
 		c.baseURL, playlistID, strings.Join(trackURIs, ","))

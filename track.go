@@ -33,7 +33,10 @@ type SimpleTrack struct {
 	// discs, the track number is the number on the specified
 	// DiscNumber.
 	TrackNumber int `json:"track_number"`
-	URI         URI `json:"uri"`
+	// The object type: "track".
+	Type string `json:"type"`
+	// The Spotify URI for the track.
+	URI URI `json:"uri"`
 }
 
 func (st SimpleTrack) String() string {
@@ -79,22 +82,6 @@ type FullTrack struct {
 	// LinkedFrom points to the linked track. It's reported when the "market" parameter is passed to the tracks listing
 	// API.
 	LinkedFrom *LinkedFromInfo `json:"linked_from"`
-}
-
-// PlaylistTrack contains info about a track in a playlist.
-type PlaylistTrack struct {
-	// The date and time the track was added to the playlist.
-	// You can use the TimestampLayout constant to convert
-	// this field to a time.Time value.
-	// Warning: very old playlists may not populate this value.
-	AddedAt string `json:"added_at"`
-	// The Spotify user who added the track to the playlist.
-	// Warning: vary old playlists may not populate this value.
-	AddedBy User `json:"added_by"`
-	// Whether this track is a local file or not.
-	IsLocal bool `json:"is_local"`
-	// Information about the track.
-	Track FullTrack `json:"track"`
 }
 
 // SavedTrack provides info about a track saved to a user's account.

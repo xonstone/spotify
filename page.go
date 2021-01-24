@@ -69,6 +69,12 @@ type SimpleTrackPage struct {
 	Tracks []SimpleTrack `json:"items"`
 }
 
+// SimpleEpisodePage contains SimpleEpisodes returned by the Web API.
+type SimpleEpisodePage struct {
+	basePage
+	Episodes []SimpleEpisode `json:"items"`
+}
+
 // FullTrackPage contains FullTracks returned by the Web API.
 type FullTrackPage struct {
 	basePage

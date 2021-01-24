@@ -60,7 +60,7 @@ type CurrentlyPlaying struct {
 	// Playing If something is currently playing.
 	Playing bool `json:"is_playing"`
 	// The currently playing track. Can be null.
-	Item *FullTrack `json:"Item"`
+	Item *SumFullEpisodeFullTrack `json:"Item"`
 }
 
 type RecentlyPlayedItem struct {
@@ -153,14 +153,18 @@ func (c *Client) PlayerState() (*PlayerState, error) {
 // options for sorting and filtering the results.
 func (c *Client) PlayerStateOpt(opt *Options) (*PlayerState, error) {
 	spotifyURL := c.baseURL + "me/player"
+	v := url.Values{}
+
+	v.Set("additional_types", "track,episode")
+
 	if opt != nil {
-		v := url.Values{}
 		if opt.Country != nil {
 			v.Set("market", *opt.Country)
 		}
-		if params := v.Encode(); params != "" {
-			spotifyURL += "?" + params
-		}
+	}
+
+	if params := v.Encode(); params != "" {
+		spotifyURL += "?" + params
 	}
 
 	var result PlayerState
@@ -186,14 +190,18 @@ func (c *Client) PlayerCurrentlyPlaying() (*CurrentlyPlaying, error) {
 // additional options for sorting and filtering the results.
 func (c *Client) PlayerCurrentlyPlayingOpt(opt *Options) (*CurrentlyPlaying, error) {
 	spotifyURL := c.baseURL + "me/player/currently-playing"
+	v := url.Values{}
+
+	v.Set("additional_types", "track,episode")
+
 	if opt != nil {
-		v := url.Values{}
 		if opt.Country != nil {
 			v.Set("market", *opt.Country)
 		}
-		if params := v.Encode(); params != "" {
-			spotifyURL += "?" + params
-		}
+
+	}
+	if params := v.Encode(); params != "" {
+		spotifyURL += "?" + params
 	}
 
 	req, err := http.NewRequest("GET", spotifyURL, nil)
@@ -365,6 +373,40 @@ func (c *Client) QueueSongOpt(trackID ID, opt *PlayOptions) error {
 	v := url.Values{}
 
 	v.Set("uri", uri.String())
+
+	if opt != nil {
+		if opt.DeviceID != nil {
+			v.Set("device_id", opt.DeviceID.String())
+		}
+	}
+
+	if params := v.Encode(); params != "" {
+		spotifyURL += "?" + params
+	}
+
+	req, err := http.NewRequest(http.MethodPost, spotifyURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return c.execute(req, nil, http.StatusNoContent)
+}
+
+// QueueSong adds a song to the user's queue on the user's currently
+// active device. This call requires ScopeUserModifyPlaybackState
+// in order to modify the player state
+func (c *Client) Queue(uri URI) error {
+	return c.QueueOpt(uri, nil)
+}
+
+// QueueSongOpt is like QueueSong but with more options
+//
+// Only expects PlayOptions.DeviceID, all other options will be ignored
+func (c *Client) QueueOpt(uri URI, opt *PlayOptions) error {
+	spotifyURL := c.baseURL + "me/player/queue"
+	v := url.Values{}
+
+	v.Set("uri", string(uri))
 
 	if opt != nil {
 		if opt.DeviceID != nil {
