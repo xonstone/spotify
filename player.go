@@ -60,7 +60,7 @@ type CurrentlyPlaying struct {
 	// Playing If something is currently playing.
 	Playing bool `json:"is_playing"`
 	// The currently playing track. Can be null.
-	Item *SumFullEpisodeFullTrack `json:"Item"`
+	Item *SumFullEpisodeFullTrack `json:"item"`
 }
 
 type RecentlyPlayedItem struct {
