@@ -1,7 +1,6 @@
 package spotify
 
 import (
-	"fmt"
 	"net/url"
 	"strconv"
 )
@@ -75,39 +74,6 @@ type SimpleShow struct {
 
 	// The Spotify URI for the show.
 	URI URI `json:"uri"`
-}
-
-func (c *Client) GetShowEpisodes(id ID) (*SimpleEpisodePage, error) {
-	return c.GetShowEpisodesOpt(id, nil)
-}
-
-func (c *Client) GetShowEpisodesOpt(id ID, opt *Options) (*SimpleEpisodePage, error) {
-	spotifyURL := fmt.Sprintf("%sshows/%s/episodes", c.baseURL, id)
-
-	if opt != nil {
-		v := url.Values{}
-		if opt.Limit != nil {
-			v.Set("limit", strconv.Itoa(*opt.Limit))
-		}
-		if opt.Offset != nil {
-			v.Set("offset", strconv.Itoa(*opt.Offset))
-		}
-		if opt.Country != nil {
-			v.Set("market", *opt.Country)
-		}
-		optional := v.Encode()
-		if optional != "" {
-			spotifyURL += "?" + optional
-		}
-	}
-
-	var result SimpleEpisodePage
-	err := c.get(spotifyURL, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
 }
 
 // GetShow retrieves information about a specific show.
